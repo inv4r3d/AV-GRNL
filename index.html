@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>INTFC_LINE — Poly Granular</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            flex-direction: column;
+            padding: 10px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .container {
+            background: #111;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #222;
+            max-width: 960px;
+            width: 100%;
+        }
+        h1 { text-align: center; color: #888; font-weight: 300; letter-spacing: 8px; font-size: 1.2rem; margin-bottom: 2px; }
+        .subtitle { text-align: center; color: #333; font-size: 0.6rem; letter-spacing: 4px; margin-bottom: 10px; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: center;
+            margin: 6px 0;
+            align-items: center;
+        }
+        .controls button, .controls label {
+            background: #1a1a1a;
+            color: #777;
+            border: 1px solid #2a2a2a;
+            padding: 4px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 9px;
+            transition: 0.3s;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .controls button:hover, .controls label:hover { background: #222; color: #aaa; border-color: #444; }
+        .controls button.active { background: #222; border-color: #555; color: #ccc; }
+        .controls input[type="file"] { display: none; }
+        .controls input[type="checkbox"] { accent-color: #555; margin-right: 4px; }
+        .controls select {
+            background: #1a1a1a;
+            color: #777;
+            border: 1px solid #2a2a2a;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: inherit;
+            font-size: 9px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            touch-action: manipulation;
+        }
+        .controls select:hover { background: #222; border-color: #444; }
+        #canvas-container {
+            background: #0a0a0a;
+            border-radius: 4px;
+            padding: 4px;
+            margin-top: 6px;
+            display: flex;
+            justify-content: center;
+            border: 1px solid #1a1a1a;
+            touch-action: none;
+        }
+        #canvas-container canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+            touch-action: none;
+        }
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 8px;
+            color: #333;
+            flex-wrap: wrap;
+            gap: 2px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .info-panel span { background: #0a0a0a; padding: 2px 8px; border-radius: 20px; border: 1px solid #1a1a1a; }
+        #status { text-align: center; margin-top: 6px; color: #444; font-size: 9px; letter-spacing: 1px; }
+        .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; }
+        .dot.green { background: #555; }
+        .dot.red { background: #555; }
+        .dot.yellow { background: #555; }
+        .dot.gray { background: #333; }
+        .rec-btn.recording {
+            background: #2a1a1a !important;
+            border-color: #663333 !important;
+            color: #aa6666 !important;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .download-btn { background: #1a1a1a !important; border-color: #2a3a2a !important; }
+        .download-btn:hover { background: #1a2a1a !important; border-color: #446644 !important; }
+        .brush-options { display: flex; gap: 3px; align-items: center; }
+        .brush-options button { padding: 3px 8px; font-size: 8px; }
+        .brush-options button.active { background: #222; border-color: #555; color: #ccc; }
+        .color-options { display: flex; gap: 3px; align-items: center; }
+        .color-options button {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid transparent;
+            padding: 0;
+            transition: 0.3s;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .color-options button:hover { transform: scale(1.1); }
+        .color-options button.active { border-color: #888; }
+        .color-options .color-white { background: #ddd; border-color: #555; }
+        .color-options .color-black { background: #111; border-color: #444; }
+        .color-options .color-white.active { border-color: #fff; }
+        .color-options .color-black.active { border-color: #888; }
+        .granular-indicator {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-left: 4px;
+        }
+        .granular-indicator.on { background: #666; box-shadow: 0 0 8px #666; }
+        .granular-indicator.off { background: #222; }
+        .granular-params {
+            display: flex;
+            gap: 6px;
+            font-size: 7px;
+            color: #444;
+            letter-spacing: 1px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .granular-params span { background: #0a0a0a; padding: 2px 6px; border-radius: 10px; border: 1px solid #1a1a1a; }
+        .export-btn { background: #1a2a1a !important; border-color: #2a4a2a !important; }
+        .export-btn:hover { background: #1a3a1a !important; border-color: #3a6a3a !important; color: #aaa !important; }
+        .motion-indicator {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-left: 4px;
+        }
+        .motion-indicator.active { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
+        .motion-indicator.inactive { background: #333; }
+        .debug-audio {
+            margin-top: 4px;
+            padding: 3px 6px;
+            background: #0a0a0a;
+            border-radius: 4px;
+            font-size: 7px;
+            color: #444;
+            font-family: monospace;
+            border: 1px solid #1a1a1a;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        .debug-audio .ok { color: #4caf50; }
+        .debug-audio .err { color: #f44336; }
+        .debug-audio .info { color: #ffc107; }
+        .debug-audio .grain { color: #ce93d8; }
+        .limb-indicators {
+            display: flex;
+            gap: 8px;
+            font-size: 6px;
+            color: #555;
+            letter-spacing: 1px;
+            flex-wrap: wrap;
+        }
+        .limb-indicators span {
+            padding: 2px 6px;
+            background: #0a0a0a;
+            border-radius: 10px;
+            border: 1px solid #1a1a1a;
+        }
+        .limb-toggle {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            font-size: 6px;
+            color: #555;
+            letter-spacing: 1px;
+            flex-wrap: wrap;
+        }
+        .limb-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: transparent;
+            border: none;
+            padding: 2px 4px;
+            cursor: pointer;
+            font-size: 6px;
+            color: #555;
+            text-transform: uppercase;
+            touch-action: manipulation;
+        }
+        .limb-toggle label:hover { color: #888; }
+        .limb-toggle input[type="checkbox"] {
+            accent-color: #555;
+            width: 10px;
+            height: 10px;
+            margin: 0;
+            touch-action: manipulation;
+        }
+        .cam-btn {
+            background: #1a2a2a !important;
+            border-color: #2a4a4a !important;
+        }
+        .cam-btn.active-cam {
+            background: #1a3a3a !important;
+            border-color: #4a8a8a !important;
+            color: #8adddd !important;
+        }
+        .mode-selector {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            font-size: 7px;
+            color: #555;
+        }
+        .mode-selector button {
+            padding: 2px 6px;
+            font-size: 7px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #777;
+            transition: 0.3s;
+            touch-action: manipulation;
+        }
+        .mode-selector button:hover { background: #222; color: #aaa; }
+        .mode-selector button.active { background: #222; border-color: #555; color: #ccc; }
+        .voice-indicators {
+            display: flex;
+            gap: 4px;
+            font-size: 6px;
+            color: #444;
+            flex-wrap: wrap;
+        }
+        .voice-indicators span {
+            padding: 1px 4px;
+            background: #0a0a0a;
+            border-radius: 8px;
+            border: 1px solid #1a1a1a;
+        }
+        .voice-indicators .active-voice { border-color: #666; color: #888; }
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            .controls button, .controls label { font-size: 7px; padding: 3px 8px; }
+            h1 { font-size: 1rem; letter-spacing: 4px; }
+            .granular-params span { font-size: 6px; padding: 1px 4px; }
+            .info-panel span { font-size: 6px; padding: 1px 6px; }
+            .limb-indicators span { font-size: 5px; padding: 1px 4px; }
+            .limb-toggle label { font-size: 5px; }
+            .debug-audio { font-size: 6px; max-height: 40px; }
+            .voice-indicators span { font-size: 5px; }
+        }
+        @media (max-width: 400px) {
+            .controls { gap: 2px; }
+            .controls button, .controls label { font-size: 6px; padding: 2px 6px; }
+            .brush-options button { font-size: 6px; padding: 2px 6px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>◂ INTFC_LINE</h1>
+    <div class="subtitle">poly · granular · 6 voices</div>
+
+    <div class="controls">
+        <label for="videoInput">📹 Load</label>
+        <input type="file" id="videoInput" accept="video/*">
+
+        <button id="btnCamera" class="cam-btn">🎥 Cam</button>
+
+        <label for="audioInput" id="audioLabel">🔊 Sample</label>
+        <input type="file" id="audioInput" accept="audio/*">
+
+        <button id="modeLine" class="active">◻ Light</button>
+        <button id="modeBlack">◼ Dark</button>
+
+        <button id="btnRecord" class="rec-btn">⏺ Rec</button>
+        <button id="btnPlay">▶ Play</button>
+        <button id="btnClear">✕ Clear</button>
+
+        <label style="background:transparent;border:none;cursor:pointer;text-transform:none;display:flex;align-items:center;">
+            <input type="checkbox" id="showSkeleton" checked> 🦴
+        </label>
+
+        <label style="background:transparent;border:none;cursor:pointer;text-transform:none;display:flex;align-items:center;">
+            <input type="checkbox" id="toggleGranular" checked> 🌾
+            <span class="granular-indicator on" id="granularIndicator"></span>
+        </label>
+
+        <select id="bodyPartSelect">
+            <option value="all">🧍 All</option>
+            <option value="hands">✋ Hands</option>
+            <option value="feet">🦶 Feet</option>
+        </select>
+
+        <div class="brush-options">
+            <button class="active" data-brush="dots">•</button>
+            <button data-brush="strokes">━</button>
+        </div>
+
+        <div class="color-options">
+            <button class="color-white active" data-color="white" title="White"></button>
+            <button class="color-black" data-color="black" title="Black"></button>
+        </div>
+
+        <button id="btnExport" class="export-btn">💾</button>
+    </div>
+
+    <!-- VOICE MODE + VOICE TOGGLES -->
+    <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:4px 0 6px 0; align-items:center;">
+        <div class="mode-selector">
+            <span style="font-size:6px;color:#555;letter-spacing:1px;">VOICES</span>
+            <button class="active" data-voice-mode="1">1</button>
+            <button data-voice-mode="3">3</button>
+            <button data-voice-mode="6">6</button>
+        </div>
+        <div class="limb-toggle">
+            <label><input type="checkbox" id="voice1" checked> V1</label>
+            <label><input type="checkbox" id="voice2" checked> V2</label>
+            <label><input type="checkbox" id="voice3" checked> V3</label>
+            <label><input type="checkbox" id="voice4" checked> V4</label>
+            <label><input type="checkbox" id="voice5" checked> V5</label>
+            <label><input type="checkbox" id="voice6" checked> V6</label>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div class="info-panel">
+        <span id="poseInfo">Pose: —</span>
+        <span id="modeInfo">Mode: Light</span>
+        <span id="recordInfo">Rec: 0</span>
+        <span id="colorInfo">Color: White</span>
+        <span id="brushInfo">Brush: Dots</span>
+        <span id="bodyInfo">Body: All</span>
+        <span id="skeletonInfo">Skel: ON</span>
+        <span id="granularInfo">Gran: ON</span>
+        <span id="sampleInfo">Sample: ⚠️</span>
+        <span id="motionInfo">Motion: <span class="motion-indicator inactive" id="motionIndicator"></span></span>
+        <span id="audioStateInfo">Audio: ⏸</span>
+        <span id="voiceModeInfo">Voices: 1</span>
+    </div>
+
+    <div class="granular-params">
+        <span id="grainPos">Pos: —</span>
+        <span id="grainSize">Size: —</span>
+        <span id="grainDensity">Density: —</span>
+        <span id="grainPitch">Pitch: —</span>
+        <span id="grainStatus">Status: ⏸</span>
+        <span id="grainCount">Grains: 0</span>
+    </div>
+
+    <div class="voice-indicators">
+        <span id="voiceInfo1">V1: —</span>
+        <span id="voiceInfo2">V2: —</span>
+        <span id="voiceInfo3">V3: —</span>
+        <span id="voiceInfo4">V4: —</span>
+        <span id="voiceInfo5">V5: —</span>
+        <span id="voiceInfo6">V6: —</span>
+    </div>
+
+    <div class="limb-indicators">
+        <span id="limbLeftHand">✋ L: —</span>
+        <span id="limbRightHand">✋ R: —</span>
+        <span id="limbLeftFoot">🦶 L: —</span>
+        <span id="limbRightFoot">🦶 R: —</span>
+    </div>
+
+    <div class="debug-audio" id="debugAudio">
+        <div class="info">🔊 Audio debug log...</div>
+    </div>
+
+    <div id="status">
+        <span class="dot gray"></span> waiting for video & sample...
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+<script>
+// ============================================================
+//  INTFC_LINE — POLY GRANULAR (6 VOICES)
+//  6 independent voices from different body parts
+// ============================================================
+
+let video;
+let videoLoaded = false;
+let videoWidth = 0;
+let videoHeight = 0;
+
+let holistic = null;
+let currentPose = null;
+let isModelReady = false;
+let isDetecting = false;
+
+let mode = 'line';
+let recording = false;
+let recordedData = [];
+let playing = false;
+let playIndex = 0;
+
+// TRAIL DATA
+let trail = [];
+const MAX_TRAIL = 800;
+
+let lineColor = { r: 238, g: 238, b: 238 };
+let brushStyle = 'dots';
+
+let canvas;
+let canvasWidth = 640;
+let canvasHeight = 480;
+
+let showSkeleton = true;
+let bodyPart = 'all';
+let granularEnabled = true;
+let isCameraMode = false;
+
+// Voice mode
+let voiceMode = 1; // 1, 3, or 6
+let voiceEnabled = [true, true, true, true, true, true];
+
+// Movement
+let movementHistory = {};
+let currentSpeed = 0;
+let energy = 0;
+let smoothedSpeed = 0;
+let smoothedEnergy = 0;
+
+let isRecordingVideo = false;
+let isExporting = false;
+let exportFrames = [];
+let exportStartTime = 0;
+const EXPORT_DURATION = 10;
+
+// ============================================================
+//  GRANULAR AUDIO ENGINE — POLY
+// ============================================================
+let audioCtx = null;
+let audioBuffer = null;
+let isAudioReady = false;
+let isSampleLoaded = false;
+let isUserSample = false;
+
+const grainVolume = 0.08;
+
+// Voice definitions — each voice uses different body parts
+const VOICE_PARAMS = [
+    { // Voice 0: Head + Neck
+        points: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        position: 0.5,
+        size: 0.12,
+        density: 20,
+        pitch: 1.0,
+        label: 'Head'
+    },
+    { // Voice 1: Left Arm
+        points: [11, 13, 15, 17, 19, 21],
+        position: 0.5,
+        size: 0.12,
+        density: 20,
+        pitch: 1.0,
+        label: 'L.Arm'
+    },
+    { // Voice 2: Right Arm
+        points: [12, 14, 16, 18, 20, 22],
+        position: 0.5,
+        size: 0.12,
+        density: 20,
+        pitch: 1.0,
+        label: 'R.Arm'
+    },
+    { // Voice 3: Torso
+        points: [11, 12, 23, 24],
+        position: 0.5,
+        size: 0.12,
+        density: 20,
+        pitch: 1.0,
+        label: 'Torso'
+    },
+    { // Voice 4: Left Leg
+        points: [23, 25, 27, 29, 31],
+        position: 0.5,
+        size: 0.12,
+        density: 20,
+        pitch: 1.0,
+        label: 'L.Leg'
+    },
+    { // Voice 5: Right Leg
+        points: [24, 26, 28, 30, 32],
+        position: 0.5,
+        size: 0.12,
+        density: 20,
+        pitch: 1.0,
+        label: 'R.Leg'
+    }
+];
+
+let voices = [];
+let lastVoiceGrainTime = [0, 0, 0, 0, 0, 0];
+
+// ============================================================
+//  DEBUG LOG
+// ============================================================
+function debugAudio(message, type = 'info') {
+    const log = document.getElementById('debugAudio');
+    const entry = document.createElement('div');
+    entry.className = type;
+    const time = new Date().toLocaleTimeString();
+    entry.textContent = `[${time}] ${message}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+    console.log(`[${type}] ${message}`);
+}
+
+// ============================================================
+//  INIT GRANULAR
+// ============================================================
+function initGranular() {
+    if (audioCtx && audioCtx.state === 'running') {
+        debugAudio('AudioContext already running', 'ok');
+        return;
+    }
+    
+    try {
+        audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+        debugAudio('AudioContext created, state: ' + audioCtx.state, 'info');
+        
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => {
+                debugAudio('AudioContext resumed, state: ' + audioCtx.state, 'ok');
+                isAudioReady = true;
+                document.getElementById('audioStateInfo').textContent = 'Audio: ▶';
+                document.getElementById('granularInfo').textContent = 'Granular: ON';
+                document.getElementById('granularIndicator').className = 'granular-indicator on';
+                processPolyGrains();
+            }).catch(err => {
+                debugAudio('Failed to resume: ' + err.message, 'err');
+            });
+        } else {
+            isAudioReady = true;
+            document.getElementById('audioStateInfo').textContent = 'Audio: ▶';
+            document.getElementById('granularInfo').textContent = 'Granular: ON';
+            document.getElementById('granularIndicator').className = 'granular-indicator on';
+            processPolyGrains();
+        }
+
+    } catch (e) {
+        debugAudio('Granular init error: ' + e.message, 'err');
+    }
+}
+
+function loadAudioSample(file) {
+    debugAudio('Loading: ' + file.name + ' (' + (file.size/1024/1024).toFixed(1) + 'MB)', 'info');
+    document.getElementById('status').innerHTML = 
+        '<span class="dot yellow"></span> Loading sample: ' + file.name + '...';
+    
+    if (!audioCtx) {
+        debugAudio('Creating AudioContext...', 'info');
+        initGranular();
+        setTimeout(() => loadAudioSample(file), 500);
+        return;
+    }
+    
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => {
+            loadAudioSample(file);
+        }).catch(err => {
+            debugAudio('Failed to resume: ' + err.message, 'err');
+        });
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        debugAudio('File read, decoding...', 'info');
+        try {
+            audioCtx.decodeAudioData(
+                e.target.result,
+                function(buffer) {
+                    audioBuffer = buffer;
+                    isSampleLoaded = true;
+                    isUserSample = true;
+                    document.getElementById('sampleInfo').textContent = 'Sample: ✓ ' + file.name.substring(0, 12) + '...';
+                    document.getElementById('status').innerHTML = 
+                        '<span class="dot green"></span> Sample loaded: ' + file.name + ' (' + buffer.duration.toFixed(1) + 's)';
+                    debugAudio('✅ SAMPLE LOADED: ' + buffer.duration.toFixed(1) + 's, ' + buffer.numberOfChannels + 'ch', 'ok');
+                    debugAudio('🔊 Poly granular active! ' + voiceMode + ' voices', 'test');
+                    document.getElementById('grainStatus').textContent = 'Status: ▶ playing';
+                },
+                function(err) {
+                    debugAudio('Decoding error: ' + err.message, 'err');
+                }
+            );
+        } catch (e) {
+            debugAudio('decodeAudioData error: ' + e.message, 'err');
+        }
+    };
+    reader.onerror = function(e) {
+        debugAudio('FileReader error: ' + e.message, 'err');
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// ============================================================
+//  POLY GRAIN PLAYBACK
+// ============================================================
+function playPolyGrain(voiceIndex, position, duration, pitch) {
+    if (!audioCtx || !audioBuffer || audioCtx.state !== 'running') return;
+    if (!granularEnabled) return;
+    if (!isUserSample || !isSampleLoaded) return;
+    if (voiceIndex >= voiceMode) return;
+    if (!voiceEnabled[voiceIndex]) return;
+    
+    try {
+        let source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        
+        let grainGain = audioCtx.createGain();
+        let now = audioCtx.currentTime;
+        let attack = duration * 0.02;
+        let release = duration * 0.03;
+        
+        // Slight volume variation per voice for depth
+        let vol = grainVolume * (0.8 + (voiceIndex / 12));
+        
+        grainGain.gain.setValueAtTime(0, now);
+        grainGain.gain.linearRampToValueAtTime(vol, now + attack);
+        grainGain.gain.setValueAtTime(vol, now + duration - release);
+        grainGain.gain.linearRampToValueAtTime(0, now + duration);
+        
+        let startTime = position * audioBuffer.duration;
+        if (startTime + duration > audioBuffer.duration) {
+            startTime = audioBuffer.duration - duration;
+        }
+        if (startTime < 0) startTime = 0;
+        
+        source.start(now, startTime, duration);
+        source.playbackRate.value = pitch;
+        
+        // Pan per voice — stereo spread
+        let pan = (voiceIndex / (voiceMode - 1 || 1)) * 2 - 1;
+        let panNode = audioCtx.createStereoPanner();
+        panNode.pan.value = pan;
+        
+        source.connect(grainGain);
+        grainGain.connect(panNode);
+        panNode.connect(audioCtx.destination);
+        
+        source.onended = function() {
+            try { source.disconnect(); grainGain.disconnect(); panNode.disconnect(); } catch(e) {}
+        };
+        
+    } catch(e) {}
+}
+
+function processPolyGrains() {
+    if (!isAudioReady || !granularEnabled || !isUserSample || !isSampleLoaded) {
+        requestAnimationFrame(processPolyGrains);
+        return;
+    }
+    
+    try {
+        let now = performance.now() / 1000;
+        
+        for (let v = 0; v < voiceMode; v++) {
+            if (!voiceEnabled[v]) continue;
+            
+            let voice = voices[v];
+            if (!voice) continue;
+            
+            let grainInterval = 1 / voice.density;
+            let timeSinceLastGrain = now - lastVoiceGrainTime[v];
+            
+            if (timeSinceLastGrain >= grainInterval) {
+                let pos = Math.max(0, Math.min(0.98, voice.position));
+                let size = Math.max(0.10, Math.min(0.25, voice.size));
+                let pitch = Math.max(0.4, Math.min(2.0, voice.pitch));
+                
+                playPolyGrain(v, pos, size, pitch);
+                lastVoiceGrainTime[v] = now;
+            }
+        }
+        
+        document.getElementById('grainStatus').textContent = 'Status: ▶ poly';
+        document.getElementById('grainCount').textContent = 'Voices: ' + voiceMode;
+        
+    } catch(e) {}
+    
+    requestAnimationFrame(processPolyGrains);
+}
+
+// ============================================================
+//  CALCULATE VOICE PARAMETERS FROM BODY PARTS
+// ============================================================
+function updateVoiceParameters(keypoints) {
+    if (!keypoints || keypoints.length < 20) return;
+    
+    for (let v = 0; v < Math.min(voiceMode, 6); v++) {
+        let voice = voices[v];
+        if (!voice) continue;
+        
+        let pts = voice.points;
+        let avgX = 0, avgY = 0, count = 0;
+        
+        for (let idx of pts) {
+            if (keypoints[idx]) {
+                avgX += keypoints[idx].x;
+                avgY += keypoints[idx].y;
+                count++;
+            }
+        }
+        
+        if (count > 0) {
+            avgX /= count;
+            avgY /= count;
+            
+            // Position from X
+            voice.position = map(avgX, 0, 1, 0, 0.95);
+            voice.position = constrain(voice.position, 0, 0.98);
+            
+            // Pitch from Y (inverted)
+            let pitchRaw = map(avgY, 0, 1, 1.8, 0.5);
+            voice.pitch = constrain(pitchRaw, 0.4, 2.0);
+            
+            // Size from Y (inverted)
+            let sizeRaw = map(avgY, 0, 1, 0.22, 0.10);
+            voice.size = constrain(sizeRaw, 0.10, 0.25);
+            
+            // Density from Y (inverted)
+            let densityRaw = map(avgY, 0, 1, 40, 10);
+            voice.density = constrain(densityRaw, 8, 50);
+        }
+    }
+}
+
+// ============================================================
+//  WEBCAM
+// ============================================================
+function startCamera() {
+    if (!isAudioReady) initGranular();
+    
+    const constraints = {
+        video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+        }
+    };
+    
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(function(stream) {
+            debugAudio('📹 Webcam started', 'ok');
+            document.getElementById('btnCamera').textContent = '🎥 ON';
+            document.getElementById('btnCamera').classList.add('active-cam');
+            isCameraMode = true;
+            
+            if (video) {
+                video.pause();
+                video.remove();
+            }
+            
+            video = createVideo(stream);
+            video.hide();
+            video.volume(0);
+            
+            video.elt.onloadedmetadata = function() {
+                videoWidth = video.elt.videoWidth || 640;
+                videoHeight = video.elt.videoHeight || 480;
+                resizeCanvasToVideo();
+                videoLoaded = true;
+                video.play();
+                debugAudio('📐 Webcam: ' + videoWidth + 'x' + videoHeight, 'ok');
+                updateStatus('Webcam ready', 'green');
+                if (isModelReady) startDetection();
+            };
+            
+            video.load();
+        })
+        .catch(function(err) {
+            debugAudio('❌ Webcam error: ' + err.message, 'err');
+            updateStatus('Webcam error', 'red');
+            isCameraMode = false;
+            document.getElementById('btnCamera').textContent = '🎥 Cam';
+            document.getElementById('btnCamera').classList.remove('active-cam');
+        });
+}
+
+function stopCamera() {
+    if (video && video.elt && video.elt.srcObject) {
+        let stream = video.elt.srcObject;
+        let tracks = stream.getTracks();
+        tracks.forEach(function(track) {
+            track.stop();
+        });
+        video.elt.srcObject = null;
+    }
+    videoLoaded = false;
+    isCameraMode = false;
+    document.getElementById('btnCamera').textContent = '🎥 Cam';
+    document.getElementById('btnCamera').classList.remove('active-cam');
+    debugAudio('📹 Webcam stopped', 'info');
+    updateStatus('Webcam stopped', 'yellow');
+}
+
+function toggleCamera() {
+    if (isCameraMode) {
+        stopCamera();
+    } else {
+        startCamera();
+    }
+}
+
+// ============================================================
+//  SETUP
+// ============================================================
+function setup() {
+    canvas = createCanvas(canvasWidth, canvasHeight);
+    canvas.parent('canvas-container');
+    pixelDensity(1);
+    background(10);
+
+    video = createVideo('');
+    video.hide();
+    video.volume(0);
+
+    // Initialize voices
+    for (let i = 0; i < 6; i++) {
+        voices.push({
+            position: 0.5,
+            size: 0.12,
+            density: 20,
+            pitch: 1.0,
+            points: VOICE_PARAMS[i] ? [...VOICE_PARAMS[i].points] : [],
+            label: VOICE_PARAMS[i] ? VOICE_PARAMS[i].label : 'V' + (i+1)
+        });
+    }
+
+    document.addEventListener('click', () => {
+        if (!isAudioReady) {
+            debugAudio('User click — initializing audio...', 'info');
+            initGranular();
+        }
+    });
+
+    document.addEventListener('touchstart', () => {
+        if (!isAudioReady) {
+            debugAudio('Touch — initializing audio...', 'info');
+            initGranular();
+        }
+    });
+
+    loadMediaPipe();
+
+    // Buttons
+    document.getElementById('modeLine').onclick = () => setMode('line');
+    document.getElementById('modeBlack').onclick = () => setMode('black');
+    document.getElementById('btnRecord').onclick = toggleRecord;
+    document.getElementById('btnPlay').onclick = togglePlay;
+    document.getElementById('btnClear').onclick = clearAll;
+    document.getElementById('btnExport').onclick = startExport;
+    document.getElementById('btnCamera').onclick = toggleCamera;
+
+    document.getElementById('showSkeleton').onchange = function() {
+        showSkeleton = this.checked;
+        document.getElementById('skeletonInfo').textContent = 'Skel: ' + (showSkeleton ? 'ON' : 'OFF');
+    };
+
+    document.getElementById('toggleGranular').onchange = function() {
+        granularEnabled = this.checked;
+        if (granularEnabled && !isAudioReady) initGranular();
+        document.getElementById('granularInfo').textContent = 'Gran: ' + (granularEnabled ? 'ON' : 'OFF');
+        document.getElementById('granularIndicator').className = 
+            granularEnabled ? 'granular-indicator on' : 'granular-indicator off';
+    };
+
+    document.getElementById('bodyPartSelect').onchange = function() {
+        bodyPart = this.value;
+        let names = { all: 'All', hands: 'Hands', feet: 'Feet' };
+        document.getElementById('bodyInfo').textContent = 'Body: ' + names[bodyPart];
+        trail = [];
+    };
+
+    // Voice mode buttons
+    document.querySelectorAll('.mode-selector button').forEach(btn => {
+        btn.onclick = function() {
+            document.querySelectorAll('.mode-selector button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            voiceMode = parseInt(this.dataset.voiceMode);
+            document.getElementById('voiceModeInfo').textContent = 'Voices: ' + voiceMode;
+            debugAudio('🎵 Voice mode: ' + voiceMode, 'info');
+            // Reset voice timers
+            lastVoiceGrainTime = [0, 0, 0, 0, 0, 0];
+        };
+    });
+
+    // Voice toggles
+    document.getElementById('voice1').onchange = function() { voiceEnabled[0] = this.checked; debugAudio('Voice 1: ' + (voiceEnabled[0] ? 'ON' : 'OFF'), 'info'); };
+    document.getElementById('voice2').onchange = function() { voiceEnabled[1] = this.checked; debugAudio('Voice 2: ' + (voiceEnabled[1] ? 'ON' : 'OFF'), 'info'); };
+    document.getElementById('voice3').onchange = function() { voiceEnabled[2] = this.checked; debugAudio('Voice 3: ' + (voiceEnabled[2] ? 'ON' : 'OFF'), 'info'); };
+    document.getElementById('voice4').onchange = function() { voiceEnabled[3] = this.checked; debugAudio('Voice 4: ' + (voiceEnabled[3] ? 'ON' : 'OFF'), 'info'); };
+    document.getElementById('voice5').onchange = function() { voiceEnabled[4] = this.checked; debugAudio('Voice 5: ' + (voiceEnabled[4] ? 'ON' : 'OFF'), 'info'); };
+    document.getElementById('voice6').onchange = function() { voiceEnabled[5] = this.checked; debugAudio('Voice 6: ' + (voiceEnabled[5] ? 'ON' : 'OFF'), 'info'); };
+
+    document.querySelectorAll('.brush-options button').forEach(btn => {
+        btn.onclick = function() {
+            document.querySelectorAll('.brush-options button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            brushStyle = this.dataset.brush;
+            let names = { dots: 'Dots', strokes: 'Strokes' };
+            document.getElementById('brushInfo').textContent = 'Brush: ' + names[brushStyle];
+            trail = [];
+        };
+    });
+
+    document.querySelectorAll('.color-options button').forEach(btn => {
+        btn.onclick = function() {
+            document.querySelectorAll('.color-options button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            if (this.dataset.color === 'white') {
+                lineColor = { r: 238, g: 238, b: 238 };
+                document.getElementById('colorInfo').textContent = 'Color: White';
+            } else {
+                lineColor = { r: 12, g: 12, b: 12 };
+                document.getElementById('colorInfo').textContent = 'Color: Black';
+            }
+        };
+    });
+
+    document.getElementById('audioInput').onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        debugAudio('Audio input changed: ' + file.name, 'info');
+        loadAudioSample(file);
+    };
+
+    document.getElementById('videoInput').onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (isCameraMode) stopCamera();
+        const url = URL.createObjectURL(file);
+        if (video) { video.pause(); video.remove(); }
+        video = createVideo(url);
+        video.hide();
+        video.volume(0);
+        video.elt.onloadedmetadata = function() {
+            videoWidth = video.elt.videoWidth;
+            videoHeight = video.elt.videoHeight;
+            resizeCanvasToVideo();
+        };
+        video.elt.onloadeddata = function() {
+            videoLoaded = true;
+            video.play();
+            updateStatus('Video loaded', 'green');
+            debugAudio('Video loaded: ' + videoWidth + 'x' + videoHeight, 'ok');
+            if (isModelReady) startDetection();
+        };
+        video.elt.onerror = function(e) {
+            debugAudio('Video error: ' + e, 'err');
+            updateStatus('Video error', 'red');
+        };
+        video.load();
+    };
+}
+
+// ============================================================
+//  RESIZE
+// ============================================================
+function resizeCanvasToVideo() {
+    if (videoWidth === 0 || videoHeight === 0) return;
+    let maxW = 800, maxH = 600;
+    let ratio = videoWidth / videoHeight;
+    let newW = maxW;
+    let newH = newW / ratio;
+    if (newH > maxH) { newH = maxH; newW = newH * ratio; }
+    canvasWidth = newW;
+    canvasHeight = newH;
+    resizeCanvas(canvasWidth, canvasHeight);
+}
+
+// ============================================================
+//  MEDIAPIPE
+// ============================================================
+function loadMediaPipe() {
+    updateStatus('Loading MediaPipe...', 'yellow');
+    debugAudio('Loading MediaPipe...', 'info');
+    try {
+        holistic = new Holistic({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
+        });
+        holistic.setOptions({
+            modelComplexity: 0,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        holistic.onResults((results) => {
+            if (results.poseLandmarks) {
+                currentPose = results;
+                document.getElementById('poseInfo').textContent =
+                    'Pose: ' + results.poseLandmarks.length + ' pts';
+            }
+        });
+        holistic.initialize().then(() => {
+            isModelReady = true;
+            debugAudio('MediaPipe ready', 'ok');
+            updateStatus('Model ready', 'green');
+            if (videoLoaded) startDetection();
+        }).catch((err) => {
+            debugAudio('MediaPipe error: ' + err, 'err');
+            updateStatus('Model error', 'red');
+        });
+    } catch (e) {
+        debugAudio('MediaPipe load error: ' + e, 'err');
+        updateStatus('Model error', 'red');
+    }
+}
+
+// ============================================================
+//  DETECTION
+// ============================================================
+function startDetection() {
+    if (!videoLoaded || !isModelReady || isDetecting) return;
+    isDetecting = true;
+    debugAudio('Detection started', 'ok');
+    detectLoop();
+}
+
+function detectLoop() {
+    if (!isDetecting) return;
+    if (!videoLoaded || !video.elt || video.elt.readyState < 2) {
+        requestAnimationFrame(detectLoop);
+        return;
+    }
+    if (!holistic) {
+        setTimeout(detectLoop, 500);
+        return;
+    }
+    try {
+        holistic.send({ image: video.elt }).then(() => {
+            if (isDetecting) requestAnimationFrame(detectLoop);
+        }).catch(() => {
+            if (isDetecting) requestAnimationFrame(detectLoop);
+        });
+    } catch (error) {
+        if (isDetecting) setTimeout(detectLoop, 500);
+    }
+}
+
+// ============================================================
+//  DRAW
+// ============================================================
+function draw() {
+    if (mode === 'black') { background(0); } else { background(10); }
+
+    if (videoLoaded && video.elt && video.elt.readyState >= 2) {
+        if (mode !== 'black') {
+            push();
+            let vr = videoWidth / videoHeight;
+            let cr = canvasWidth / canvasHeight;
+            if (vr > cr) {
+                let w = canvasWidth;
+                let h = canvasWidth / vr;
+                let y = (canvasHeight - h) / 2;
+                image(video, 0, y, w, h);
+            } else {
+                let h = canvasHeight;
+                let w = canvasHeight * vr;
+                let x = (canvasWidth - w) / 2;
+                image(video, x, 0, w, h);
+            }
+            pop();
+        }
+    } else {
+        push();
+        fill(50);
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(18);
+        text('📹 Load Video', canvasWidth / 2, canvasHeight / 2 - 8);
+        textSize(10);
+        text('or click 🎥 Cam', canvasWidth / 2, canvasHeight / 2 + 22);
+        pop();
+        return;
+    }
+
+    let keypoints = [];
+    if (currentPose && currentPose.poseLandmarks) {
+        keypoints = currentPose.poseLandmarks;
+    }
+
+    if (playing && recordedData.length > 0) {
+        if (playIndex < recordedData.length) {
+            keypoints = recordedData[playIndex];
+            playIndex++;
+            if (playIndex >= recordedData.length) playIndex = 0;
+        }
+    }
+
+    if (recording && keypoints.length > 0) {
+        recordedData.push(keypoints.map(k => ({ ...k })));
+        if (recordedData.length > 500) recordedData.shift();
+        document.getElementById('recordInfo').textContent = 'Rec: ' + recordedData.length;
+    }
+
+    if (keypoints && keypoints.length > 20) {
+        let trackedPoints = getTrackedPoints(keypoints);
+        drawBrush(trackedPoints);
+        if (showSkeleton) drawSkeleton(keypoints);
+        calculateMovementAndGranular(keypoints);
+    } else if (videoLoaded && mode !== 'black') {
+        push();
+        fill(60, 60, 60, 150);
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(12);
+        text('⏳ waiting for person...', canvasWidth / 2, canvasHeight / 2);
+        pop();
+        currentSpeed = 0;
+        energy = 0;
+    }
+
+    if (isExporting) {
+        let elapsed = (millis() - exportStartTime) / 1000;
+        if (elapsed < EXPORT_DURATION) {
+            exportFrames.push(canvas.elt.toDataURL('image/png'));
+            document.getElementById('status').innerHTML = 
+                '<span class="dot red"></span> Export: ' + Math.round(elapsed) + 's / ' + EXPORT_DURATION + 's';
+        } else {
+            finishExport();
+        }
+    }
+
+    if (recording) {
+        push(); noStroke(); fill(180, 180, 180, 180); ellipse(canvasWidth - 18, 18, 8, 8);
+        let pulse = sin(frameCount * 0.1) * 0.3 + 0.7;
+        fill(180, 180, 180, 40 * pulse); ellipse(canvasWidth - 18, 18, 20, 20); pop();
+    }
+    if (playing) {
+        push(); noStroke(); fill(150, 150, 150, 180); ellipse(canvasWidth - 42, 18, 8, 8); pop();
+    }
+    if (isRecordingVideo) {
+        push(); noStroke(); fill(180, 180, 180, 200); rect(10, 10, 6, 6);
+        fill(180, 180, 180, 50); rect(8, 8, 10, 10); pop();
+    }
+    if (isExporting) {
+        push(); noStroke(); fill(200, 200, 200, 150); rect(canvasWidth - 50, 10, 40, 16);
+        fill(150); textSize(8); textAlign(CENTER, CENTER); text('EXPORT', canvasWidth - 30, 18); pop();
+    }
+}
+
+// ============================================================
+//  GET TRACKED POINTS
+// ============================================================
+function getTrackedPoints(keypoints) {
+    let points = [];
+    if (bodyPart === 'hands' || bodyPart === 'all') {
+        if (keypoints[15]) points.push(keypoints[15]);
+        if (keypoints[16]) points.push(keypoints[16]);
+        if (bodyPart === 'all') {
+            if (keypoints[13]) points.push(keypoints[13]);
+            if (keypoints[14]) points.push(keypoints[14]);
+        }
+    }
+    if (bodyPart === 'feet' || bodyPart === 'all') {
+        if (keypoints[27]) points.push(keypoints[27]);
+        if (keypoints[28]) points.push(keypoints[28]);
+        if (bodyPart === 'all') {
+            if (keypoints[25]) points.push(keypoints[25]);
+            if (keypoints[26]) points.push(keypoints[26]);
+        }
+    }
+    if (points.length === 0) points = keypoints;
+    return points;
+}
+
+// ============================================================
+//  CALCULATE MOVEMENT + UPDATE VOICES
+// ============================================================
+function calculateMovementAndGranular(keypoints) {
+    // Update voice parameters from body parts
+    updateVoiceParameters(keypoints);
+
+    // Update voice indicators
+    for (let v = 0; v < Math.min(voiceMode, 6); v++) {
+        let voice = voices[v];
+        let el = document.getElementById('voiceInfo' + (v+1));
+        if (el) {
+            el.textContent = 'V' + (v+1) + ': ' + voice.label + 
+                ' p' + (voice.position * 100).toFixed(0) + 
+                '% s' + (voice.size * 1000).toFixed(0) + 
+                'ms d' + voice.density.toFixed(0);
+            el.className = voiceEnabled[v] ? 'active-voice' : '';
+        }
+    }
+
+    // Calculate overall speed for motion indicator
+    let totalSpeed = 0;
+    let count = 0;
+    
+    // Use all keypoints for overall motion
+    for (let k of keypoints) {
+        if (k) {
+            let key = `k_${k.x.toFixed(3)}_${k.y.toFixed(3)}`;
+            if (movementHistory[key]) {
+                let prev = movementHistory[key];
+                let speed = dist(prev.x, prev.y, k.x, k.y) * 100;
+                totalSpeed += speed;
+                count++;
+            }
+            movementHistory[key] = { x: k.x, y: k.y };
+        }
+    }
+    
+    let keys = Object.keys(movementHistory);
+    if (keys.length > 200) {
+        let toDelete = keys.slice(0, keys.length - 100);
+        for (let k of toDelete) delete movementHistory[k];
+    }
+    
+    currentSpeed = count > 0 ? totalSpeed / count : 0;
+    let targetEnergy = min(currentSpeed / 30, 1);
+    energy = lerp(energy, targetEnergy, 0.02);
+    
+    smoothedSpeed = lerp(smoothedSpeed, currentSpeed, 0.1);
+    smoothedEnergy = lerp(smoothedEnergy, energy, 0.1);
+
+    if (currentSpeed > 0.03) {
+        document.getElementById('motionIndicator').className = 'motion-indicator active';
+    } else {
+        document.getElementById('motionIndicator').className = 'motion-indicator inactive';
+    }
+
+    // Update main display with first voice params
+    if (voices.length > 0) {
+        document.getElementById('grainPos').textContent = 'Pos: ' + (voices[0].position * 100).toFixed(0) + '%';
+        document.getElementById('grainSize').textContent = 'Size: ' + (voices[0].size * 1000).toFixed(0) + 'ms';
+        document.getElementById('grainDensity').textContent = 'Density: ' + voices[0].density.toFixed(0) + '/s';
+        document.getElementById('grainPitch').textContent = 'Pitch: ' + voices[0].pitch.toFixed(2) + 'x';
+    }
+}
+
+// ============================================================
+//  DRAW BRUSH
+// ============================================================
+function drawBrush(points) {
+    if (!points || points.length === 0) return;
+    let baseR = lineColor.r, baseG = lineColor.g, baseB = lineColor.b;
+    for (let p of points) {
+        let x = p.x * canvasWidth;
+        let y = p.y * canvasHeight;
+        let speed = 0;
+        if (trail.length > 0) {
+            let last = trail[trail.length - 1];
+            speed = dist(last.x, last.y, x, y);
+        }
+        trail.push({ x, y, speed, time: frameCount });
+        if (trail.length > MAX_TRAIL) trail.shift();
+    }
+    if (trail.length < 2) return;
+    noStroke();
+    if (brushStyle === 'dots') {
+        for (let i = 0; i < trail.length; i++) {
+            let p = trail[i];
+            let age = map(i, 0, trail.length, 0.15, 1);
+            let speedFactor = constrain(p.speed / 6, 0.2, 2);
+            let offsetX = random(-2, 2), offsetY = random(-2, 2);
+            let size = map(speedFactor, 0.2, 2, 1, 5) + random(0, 1);
+            let alpha = map(speedFactor, 0.2, 2, 220, 90) * age;
+            alpha = constrain(alpha, 20, 230);
+            fill(baseR, baseG, baseB, alpha);
+            ellipse(p.x + offsetX, p.y + offsetY, size, size);
+        }
+        if (trail.length > 0) {
+            let last = trail[trail.length - 1];
+            let tipSize = map(last.speed, 0, 25, 2, 8);
+            let tipAlpha = map(last.speed, 0, 25, 80, 200);
+            fill(baseR, baseG, baseB, tipAlpha);
+            ellipse(last.x, last.y, tipSize);
+            fill(baseR, baseG, baseB, tipAlpha * 0.12);
+            ellipse(last.x, last.y, tipSize * 2.5);
+        }
+    } else if (brushStyle === 'strokes') {
+        for (let i = 1; i < trail.length; i++) {
+            let p = trail[i], pPrev = trail[i - 1];
+            if (dist(p.x, p.y, pPrev.x, pPrev.y) < 0.3) continue;
+            let speedFactor = constrain(p.speed / 4, 0.2, 2.5);
+            let age = map(i, 0, trail.length, 0.15, 1);
+            let noise1 = sin(i * 0.5 + frameCount * 0.002) * 1.5;
+            let noise2 = cos(i * 0.6 + frameCount * 0.003) * 1.5;
+            let thickness = map(speedFactor, 0.2, 2.5, 0.8, 8) + noise1 * 0.8;
+            thickness = constrain(thickness, 0.3, 10);
+            let alpha = map(speedFactor, 0.2, 2.5, 220, 80) * age + 5;
+            alpha = constrain(alpha, 15, 230);
+            let r = constrain(baseR + noise1 * 3, 0, 255);
+            let g = constrain(baseG + noise2 * 2, 0, 255);
+            let b = constrain(baseB + noise1 * 2, 0, 255);
+            push(); noFill(); stroke(r, g, b, alpha); strokeWeight(thickness);
+            strokeCap(ROUND); strokeJoin(ROUND);
+            let cx = (pPrev.x + p.x) / 2 + noise1 * 0.4;
+            let cy = (pPrev.y + p.y) / 2 + noise2 * 0.4;
+            beginShape();
+            vertex(pPrev.x + noise1 * 0.15, pPrev.y + noise2 * 0.15);
+            quadraticVertex(cx, cy, p.x + noise1 * 0.25, p.y + noise2 * 0.25);
+            endShape(); pop();
+            if (i % 3 === 0 && baseR > 200) {
+                push(); noFill();
+                stroke(r + 8, g + 6, b + 10, alpha * 0.15);
+                strokeWeight(thickness * 0.2); strokeCap(ROUND);
+                let ox = sin(i * 0.7 + frameCount * 0.002) * 3;
+                let oy = cos(i * 0.5 + frameCount * 0.003) * 3;
+                let cx2 = (pPrev.x + p.x) / 2 + ox;
+                let cy2 = (pPrev.y + p.y) / 2 + oy;
+                beginShape();
+                vertex(pPrev.x + ox, pPrev.y + oy);
+                quadraticVertex(cx2, cy2, p.x + ox, p.y + oy);
+                endShape(); pop();
+            }
+        }
+        if (trail.length > 0) {
+            let last = trail[trail.length - 1];
+            let tipSize = map(last.speed, 0, 25, 2, 10);
+            let tipAlpha = map(last.speed, 0, 25, 80, 200);
+            push(); noStroke();
+            fill(baseR, baseG, baseB, tipAlpha);
+            ellipse(last.x, last.y, tipSize);
+            fill(baseR, baseG, baseB, tipAlpha * 0.12);
+            ellipse(last.x, last.y, tipSize * 2.5); pop();
+        }
+    }
+}
+
+// ============================================================
+//  SKELETON
+// ============================================================
+function drawSkeleton(keypoints) {
+    let connections = [
+        [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],[9,10],[11,12],
+        [11,13],[13,15],[12,14],[14,16],[15,17],[15,19],[15,21],[17,19],
+        [16,18],[16,20],[16,22],[18,20],[11,23],[12,24],[23,24],[23,25],
+        [24,26],[25,27],[26,28],[27,29],[28,30],[29,31],[30,32]
+    ];
+    
+    if (!keypoints || keypoints.length === 0) return;
+    
+    let pts = keypoints.map(p => ({
+        x: p.x * canvasWidth,
+        y: p.y * canvasHeight
+    }));
+    
+    push();
+    stroke(180, 180, 180, 60);
+    strokeWeight(1.5);
+    
+    for (let c of connections) {
+        if (c[0] < pts.length && c[1] < pts.length) {
+            let p1 = pts[c[0]];
+            let p2 = pts[c[1]];
+            if (p1.x > 0 && p1.y > 0 && p2.x > 0 && p2.y > 0) {
+                line(p1.x, p1.y, p2.x, p2.y);
+            }
+        }
+    }
+    
+    fill(200, 200, 200, 40);
+    noStroke();
+    for (let p of pts) {
+        if (p.x > 0 && p.y > 0) {
+            ellipse(p.x, p.y, 3, 3);
+        }
+    }
+    pop();
+}
+
+// ============================================================
+//  EXPORT
+// ============================================================
+function startExport() {
+    if (!videoLoaded) { alert('Load a video or start camera!'); return; }
+    if (!isAudioReady || !isSampleLoaded || !isUserSample) { 
+        alert('Load an audio sample first!'); 
+        return; 
+    }
+    isExporting = true;
+    exportFrames = [];
+    exportStartTime = millis();
+    document.getElementById('btnExport').textContent = '⏹';
+    document.getElementById('status').innerHTML = '<span class="dot red"></span> Exporting ' + EXPORT_DURATION + 's...';
+}
+
+function finishExport() {
+    isExporting = false;
+    document.getElementById('btnExport').textContent = '💾';
+    if (exportFrames.length === 0) {
+        document.getElementById('status').innerHTML = '<span class="dot red"></span> Export failed: no frames';
+        return;
+    }
+    createVideoFromFrames(exportFrames);
+}
+
+function createVideoFromFrames(frames) {
+    document.getElementById('status').innerHTML = '<span class="dot yellow"></span> Rendering...';
+    let tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvasWidth;
+    tempCanvas.height = canvasHeight;
+    let ctx = tempCanvas.getContext('2d');
+    let stream = tempCanvas.captureStream(30);
+    let mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 5000000
+    });
+    let chunks = [];
+    mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = function() {
+        let blob = new Blob(chunks, { type: 'video/webm' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = 'intfc_poly_' + Date.now() + '.webm';
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById('status').innerHTML = '<span class="dot green"></span> Export complete!';
+    };
+    mediaRecorder.start();
+    let frameIndex = 0;
+    let interval = setInterval(() => {
+        if (frameIndex >= frames.length) { clearInterval(interval); mediaRecorder.stop(); return; }
+        let img = new Image();
+        img.onload = function() { ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height); ctx.drawImage(img, 0, 0); };
+        img.src = frames[frameIndex];
+        frameIndex++;
+    }, 1000 / 30);
+    setTimeout(() => { if (mediaRecorder.state === 'recording') { clearInterval(interval); mediaRecorder.stop(); } }, 15000);
+}
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+    if (m === 'line') document.getElementById('modeLine').classList.add('active');
+    if (m === 'black') document.getElementById('modeBlack').classList.add('active');
+    let names = { line: 'Light', black: 'Dark' };
+    document.getElementById('modeInfo').textContent = 'Mode: ' + names[m];
+    trail = [];
+}
+
+function toggleRecord() {
+    if (!videoLoaded) { alert('Load video or start camera!'); return; }
+    recording = !recording;
+    if (recording) {
+        recordedData = [];
+        document.getElementById('btnRecord').textContent = '⏹';
+        document.getElementById('btnRecord').classList.add('recording');
+        updateStatus('Recording...', 'red');
+    } else {
+        document.getElementById('btnRecord').textContent = '⏺';
+        document.getElementById('btnRecord').classList.remove('recording');
+        updateStatus('Recorded: ' + recordedData.length + ' frames', 'green');
+    }
+}
+
+function togglePlay() {
+    if (recordedData.length === 0) { alert('Record movement first!'); return; }
+    playing = !playing;
+    if (playing) {
+        playIndex = 0;
+        document.getElementById('btnPlay').textContent = '⏹';
+        updateStatus('Playing...', 'green');
+    } else {
+        document.getElementById('btnPlay').textContent = '▶';
+        updateStatus('Stopped', 'yellow');
+    }
+}
+
+function clearAll() {
+    recording = false;
+    playing = false;
+    recordedData = [];
+    trail = [];
+    currentPose = null;
+    movementHistory = {};
+    currentSpeed = 0;
+    energy = 0;
+    smoothedSpeed = 0;
+    smoothedEnergy = 0;
+    lastVoiceGrainTime = [0, 0, 0, 0, 0, 0];
+    document.getElementById('motionIndicator').className = 'motion-indicator inactive';
+    document.getElementById('btnRecord').textContent = '⏺';
+    document.getElementById('btnRecord').classList.remove('recording');
+    document.getElementById('btnPlay').textContent = '▶';
+    document.getElementById('recordInfo').textContent = 'Rec: 0';
+    updateStatus('Cleared', 'yellow');
+}
+
+function updateStatus(text, color = 'gray') {
+    document.getElementById('status').innerHTML = `<span class="dot ${color}"></span> ${text}`;
+}
+
+console.log('◂ INTFC_LINE — POLY GRANULAR');
+console.log('🎵 6 independent voices from different body parts');
+console.log('  V1: Head');
+console.log('  V2: Left Arm');
+console.log('  V3: Right Arm');
+console.log('  V4: Torso');
+console.log('  V5: Left Leg');
+console.log('  V6: Right Leg');
+console.log('📱 Click 1/3/6 to change voice count');
+console.log('☑️ Toggle individual voices');
+</script>
+</body>
+</html>
